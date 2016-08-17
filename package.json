@@ -1,0 +1,21 @@
+{
+  "name": "reptile",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "async": "^2.0.1",
+    "cheerio": "^0.20.0",
+    "jquery": "^3.1.0",
+    "mysql": "^2.11.1",
+    "phantom": "^2.1.16",
+    "phantomjs": "^2.1.7+deprecated",
+    "superagent": "^2.2.0",
+    "webpack": "^1.13.1"
+  }
+}
