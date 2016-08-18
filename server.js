@@ -97,13 +97,15 @@ event.addListener('bigArea', function (areaList) {
                                 name: '',
                                 url: ''
                             };
+                        //console.log(area);
                         if(area.children) {
                             _obj.name = area.children[0].data;
                             _obj.url = url + area.attribs.href;
                             item.locationList.push(_obj);
-                            connection.query('insert into bigArea set district = ?, area = ?, url = ?',[item.name, _obj.name, _obj.url ], function (err, result) {
+                            /*connection.query('insert into bigarea set district = ?, area = ?, url = ?',[item.name, _obj.name, _obj.url ], function (err, result) {
                                 if(err) return console.log(err);
-                            })
+                                console.log(_obj.name + ':' + _obj.url + '数据存储完毕');
+                            })*/
                         }
                     }
                 }
@@ -111,7 +113,7 @@ event.addListener('bigArea', function (areaList) {
             });
     }, function (err, results) {
         "use strict";
-        //event.emit('smallArea', results);
+        event.emit('smallArea', results);
     });
 });
 
@@ -119,13 +121,75 @@ event.addListener('bigArea', function (areaList) {
 //限制并发抓取住房数据
 event.addListener('smallArea', function (areaList) {
     areaList = areaList || [];
-    var smallAreaObj = {},
-        url = config.web[0].rootUrl;
-    async.mapSeries(areaList, function (item, cb) {
-        var areaName = item.name;
-        smallAreaObj.name = areaName
-        smallAreaObj.pageList = [];
-        async.mapLimit(item.locationList, 2, function (_item, _cb) {      //开2个进程进行对于js的执行
+    var url = config.web[0].rootUrl;
+    //console.log(areaList);
+
+    for(var i = 0; i < areaList.length; i++) {
+        var item = areaList[i],
+            areaName = item.name,
+            smallAreaObj = {
+                name: areaName,
+                pageList: []
+            };
+        (function (item) {
+            async.mapLimit(item.locationList, 5, function (_item, _cb) {      //开2个进程进行对于js的执行
+                "use strict";
+                phantomInit(_item.url, function () {
+                    return document.querySelector('body').innerHTML;
+                }, function (html) {
+                    var $ = cheerio.load(html),
+                        pageList = $('.page-box a'),
+                        maxPage = 1,
+                        i = 2,
+                        baseUrl = '';
+
+                    for(let key in pageList) {
+                        if(typeof Number(key) === 'number' && Number(key)) {
+                            let pageItem = pageList[key];
+                            baseUrl = path.dirname(pageItem.attribs['href']);
+                            maxPage = Math.max(maxPage, pageItem.attribs['data-page']);     //获取对象的属性  pageItem.attribs.data-page  这种写法有问题 =====>>>>>  pageItem.attribs['data-page']
+                        }
+                    }
+
+                    connection.query('insert into areapagelist set district = ?, area = ?, pageUrl = ?', [areaName, _item.name, url + baseUrl], function (err, result) {
+                        if(err) return console.log(err);
+                        console.log(_item.name + ':' + baseUrl + 'has been stored');
+                    });
+
+
+                    while(i <= maxPage) {
+                        let href = url + baseUrl + '/pg' + i + '/';
+                        connection.query('insert into areapagelist set district = ?, area = ?, pageUrl = ?', [areaName, _item.name, href], function (err, result) {
+                            if(err) return console.log(err);
+                            console.log(_item.name + ':' + href + 'has been stored');
+                        });
+                        //smallAreaObj.pageList.push(href);
+                        i++;
+                    }
+
+                    //smallAreaObj.pageList.push(baseUrl);    //每个街道的第一页的数据
+
+                    //console.log(smallAreaObj);
+
+                    _cb(null, smallAreaObj);           //TODO 注意这里的cb是否调用错误
+                });
+            }, function (err, results) {
+
+                console.log('所有page信息抓取完毕.......................');
+
+            });
+        })(item);
+
+    }
+
+
+    /*async.mapSeries(areaList, function (item, cb) {
+        var areaName = item.name,
+            smallAreaObj = {
+                name: areaName,
+                pageList: []
+            };
+        async.mapLimit(item.locationList, 5, function (_item, _cb) {      //开2个进程进行对于js的执行
             "use strict";
             phantomInit(_item.url, function () {
                 return document.querySelector('body').innerHTML;
@@ -133,31 +197,51 @@ event.addListener('smallArea', function (areaList) {
                 var $ = cheerio.load(html),
                     pageList = $('.page-box a'),
                     maxPage = 1,
-                    i = 2;
+                    i = 2,
+                    baseUrl = '';
 
                 for(let key in pageList) {
                     if(typeof Number(key) === 'number' && Number(key)) {
                         let pageItem = pageList[key];
+                        baseUrl = path.dirname(pageItem.attribs['href']);
                         maxPage = Math.max(maxPage, pageItem.attribs['data-page']);     //获取对象的属性  pageItem.attribs.data-page  这种写法有问题 =====>>>>>  pageItem.attribs['data-page']
                     }
                 }
 
+                connection.query('insert into areapagelist set district = ?, area = ?, pageUrl = ?', [areaName, _item.name, baseUrl], function (err, result) {
+                    if(err) return console.log(err);
+                    console.log(_item.name + ':' + baseUrl + 'has been stored');
+                });
+
+
                 while(i <= maxPage) {
-                    let href = url + item.url + 'pg' + i + '/';
-                    smallAreaObj.pageList.push(href);
+                    let href = baseUrl + '/pg' + i + '/';
+                    connection.query('insert into areapagelist set district = ?, area = ?, pageUrl = ?', [areaName, _item.name, href], function (err, result) {
+                        if(err) return console.log(err);
+                        console.log(_item.name + ':' + href + 'has been stored');
+                    });
+                    //smallAreaObj.pageList.push(href);
                     i++;
                 }
-                cb(null, smallAreaObj);           //TODO 注意这里的cb是否调用错误
+
+                //smallAreaObj.pageList.push(baseUrl);    //每个街道的第一页的数据
+
+                //console.log(smallAreaObj);
+
+                _cb(null, smallAreaObj);           //TODO 注意这里的cb是否调用错误
             });
         }, function (err, results) {
-            console.log('inner callback done');
-        });
 
-        cb('inner fn has finished');
+            console.log('所有page信息抓取完毕.......................');
+
+
+            //console.log('inner callback done');
+        });
+        cb(null, 'inner fn has finished');
     }, function(err, results) {
         "use strict";
         console.log(results);
-    });
+    });*/
 });
 
 event.addListener('getAllSites', (allSites) => {
@@ -201,3 +285,39 @@ event.addListener('getAllSites', (allSites) => {
         console.log(locInfoArr);
     });*/
 
+
+/*allSites.forEach((siteItem, index) => {
+ var siteName = siteItem.name,
+ pageList = siteItem.pageList;
+
+ async.mapLimit(pageList, 2, function (url, cb) {
+ request.get(url)
+ .end((err, res) => {
+ var $ = cheerio.load(res.text),
+ dataList = $("#house-lst > li"),
+ locInfoArr = [];
+
+ dataList.each(function (i, elem) {
+ locInfoArr[i] = {
+ area: siteName,
+ infoTitle: $(this).find('.info-panel .where').text(),
+ infoLoc: $(this).find('.info-panel .where a span').text(),
+ infoZone: $(this).find('.info-panel .zone').text(),
+ infoMeters: $(this).find('.info-panel .meters').text(),
+ infoPrice: $(this).find('.info-panel .price').text(),
+ infoUrl: $(this).find('.pic-panel a')[0].attribs.href,
+ infoImgSrc: $(this).find('.pic-panel img')[0].attribs.src
+ };
+
+ connection.query('insert into smallarea set ?', locInfoArr[i], function (err, result) {
+ if(err) return console.log(err);
+ console.log(siteName + ':' + locInfoArr[i].infoLoc + '数据存储完毕');
+ })
+ });
+
+ cb(null, 'good');
+ });
+ }, function (err, res) {
+ console.log('数据存储完毕');
+ });
+ });*/
