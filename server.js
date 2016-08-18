@@ -5,8 +5,13 @@ const event = new (require('events').EventEmitter)();   //事件实例
 const path = require('path');
 const async = require('async');
 const phantom = require('phantom');     //提供一个js的runtime
-const $$ = require('jquery');
 const mysql = require('mysql');
+const util = require('util');           //Node自身提供的一些方法
+
+
+
+//phantom添加不加载图片的设置
+//http://www.oschina.net/translate/web-scraping-with-node-js
 
 
 
@@ -43,7 +48,7 @@ phantomInit('http://bj.lianjia.com/zufang/dongcheng/', function () {
 
 
 //抓取所有的大区数据
-request.get(config.web[0].baseUrl)
+/*request.get(config.web[0].baseUrl)
     .end((err, res) => {
         "use strict";
         let $ = cheerio.load(res.text),
@@ -66,7 +71,7 @@ request.get(config.web[0].baseUrl)
             }
         }
         event.emit('bigArea', areaList);
-    });
+    });*/
 
 
 
@@ -120,8 +125,8 @@ event.addListener('smallArea', function (areaList) {
         url = config.web[0].rootUrl;
     async.mapSeries(areaList, function (item, cb) {
         var areaName = item.name;
-        smallAreaObj[areaName] = {};
-        smallAreaObj[areaName].pageList = [];
+        smallAreaObj.name = areaName
+        smallAreaObj.pageList = [];
         async.mapLimit(item.locationList, 2, function (_item, _cb) {      //开2个进程进行对于js的执行
             "use strict";
             phantomInit(_item.url, function () {
@@ -141,10 +146,10 @@ event.addListener('smallArea', function (areaList) {
 
                 while(i <= maxPage) {
                     let href = url + item.url + 'pg' + i + '/';
-                    smallAreaObj[areaName].pageList.push(href);
+                    smallAreaObj.pageList.push(href);
                     i++;
                 }
-                cb(smallAreaObj);
+                cb(smallAreaObj);           //注意这里的cb是否调用错误
             });
         }, function (err, results) {
             console.log('inner callback done');
@@ -157,8 +162,44 @@ event.addListener('smallArea', function (areaList) {
     });
 });
 
+event.addListener('getAllSites', (allSites) => {
+    "use strict";
+    allSites.forEach((siteItem, index) => {
+        var siteName = siteItem.name,
+            pageList = siteItem.pageList;
 
-event.addListener('getAllSites', function (pageList) {
+        async.mapLimit(pageList, 2, function (url, cb) {
+           request.get(url)
+                .end((err, res) => {
+                    var $ = cheerio.load(res),
+                        dataList = $('#house-lst>li');
 
+               })
+        }, function (err, res) {
+            console.log(123);
+        });
+    })
 });
+
+//获取所有的具体数据
+request.get('http://bj.lianjia.com/zufang/dongcheng/')
+    .end((err, res) => {
+        "use strict";
+        var $ = cheerio.load(res.text),
+            dataList = $("#house-lst > li"),
+            locInfoArr = [];
+
+        dataList.each(function (i, elem) {
+            locInfoArr[i] = {
+                infoTitle: $(this).find('.info-panel .where').text(),
+                infoLoc: $(this).find('.info-panel .where a span').text(),
+                infoZone: $(this).find('.info-panel .zone').text(),
+                infoMeters: $(this).find('.info-panel .meters').text(),
+                infoPrice: $(this).find('.info-panel .price').text(),
+                infoUrl: $(this).find('.pic-panel a')[0].attribs.href,
+                infoImgSrc: $(this).find('.pic-panel img')[0].attribs.src
+            };
+        });
+        console.log(locInfoArr);
+    });
 
