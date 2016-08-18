@@ -1,6 +1,8 @@
 /**
  * Created by XRene on 16/8/15.
  */
+
+
 module.exports = {
     web: [
         {
@@ -9,10 +11,4 @@ module.exports = {
             baseUrl: 'http://bj.lianjia.com/zufang/rs'
         }
     ],
-    db: {
-        host: 'senlinxunjian.mysql.rds.aliyuncs.com',
-        user: 'dbadmin',
-        password: 'ccbfu6233',
-        database: 'experiments'
-    }
 };
