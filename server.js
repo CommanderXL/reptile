@@ -9,6 +9,10 @@ const mysql = require('mysql');
 const util = require('util');           //Node自身提供的一些方法
 
 
+const connection = mysql.createConnection(config.db);
+
+connection.connect();
+
 
 //phantom添加不加载图片的设置
 //http://www.oschina.net/translate/web-scraping-with-node-js
@@ -38,17 +42,8 @@ var phantomInit = function (url, cb1, cb2) {
     });
 };
 
-/*
-phantomInit('http://bj.lianjia.com/zufang/dongcheng/', function () {
-    "use strict";
-    return document.querySelector('body').innerHTML;
-}, function (html) {
-    console.log(html);
-});*/
-
-
 //抓取所有的大区数据
-/*request.get(config.web[0].baseUrl)
+request.get(config.web[0].baseUrl)
     .end((err, res) => {
         "use strict";
         let $ = cheerio.load(res.text),
@@ -71,7 +66,7 @@ phantomInit('http://bj.lianjia.com/zufang/dongcheng/', function () {
             }
         }
         event.emit('bigArea', areaList);
-    });*/
+    });
 
 
 
@@ -83,7 +78,7 @@ event.addListener('bigArea', function (areaList) {
     areaList.forEach(function (item, index) {
         item.url = url + item.url
     });
-    areaList.length = 1;
+    //areaList.length = 1;
     //控制并发抓取小区数据
     async.mapSeries(areaList, function (item, cb) {
         "use strict";
@@ -106,6 +101,9 @@ event.addListener('bigArea', function (areaList) {
                             _obj.name = area.children[0].data;
                             _obj.url = url + area.attribs.href;
                             item.locationList.push(_obj);
+                            connection.query('insert into bigArea set district = ?, area = ?, url = ?',[item.name, _obj.name, _obj.url ], function (err, result) {
+                                if(err) return console.log(err);
+                            })
                         }
                     }
                 }
@@ -113,7 +111,7 @@ event.addListener('bigArea', function (areaList) {
             });
     }, function (err, results) {
         "use strict";
-        event.emit('smallArea', results);
+        //event.emit('smallArea', results);
     });
 });
 
@@ -149,7 +147,7 @@ event.addListener('smallArea', function (areaList) {
                     smallAreaObj.pageList.push(href);
                     i++;
                 }
-                cb(smallAreaObj);           //注意这里的cb是否调用错误
+                cb(null, smallAreaObj);           //TODO 注意这里的cb是否调用错误
             });
         }, function (err, results) {
             console.log('inner callback done');
@@ -182,7 +180,7 @@ event.addListener('getAllSites', (allSites) => {
 });
 
 //获取所有的具体数据
-request.get('http://bj.lianjia.com/zufang/dongcheng/')
+/*request.get('http://bj.lianjia.com/zufang/dongcheng/')
     .end((err, res) => {
         "use strict";
         var $ = cheerio.load(res.text),
@@ -201,5 +199,5 @@ request.get('http://bj.lianjia.com/zufang/dongcheng/')
             };
         });
         console.log(locInfoArr);
-    });
+    });*/
 

@@ -12,6 +12,7 @@ module.exports = {
     db: {
         host: 'senlinxunjian.mysql.rds.aliyuncs.com',
         user: 'dbadmin',
-        password: 'ccbfu6233'
+        password: 'ccbfu6233',
+        database: 'experiments'
     }
 };
