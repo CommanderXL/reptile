@@ -1,0 +1,48 @@
+.dropdown-box {
+  display: flex;
+  width: 300px;
+  background-color: #fff;
+}
+
+.dropdown {
+  position: relative;
+  width: 100px;
+  flex: 1;
+  .dropdown-name {
+    height: 34px;
+    line-height: 34px;
+    text-align: center;
+  }
+  .dropdown-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    box-sizing: border-box;
+    background-color: #fff;
+    height: 280px;
+    z-index: 500;
+    .list-box {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      overflow-y: auto;
+    }
+    li {
+      cursor: pointer;
+      text-align: center;
+      padding: 4px 8px;
+      &:hover {
+        background: #007fff;
+        color: #fff;
+      }
+    }
+  }
+}
+
+
+.isListShow {
+  display: none;
+}
